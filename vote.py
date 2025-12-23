@@ -7,7 +7,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 # --- CONFIGURATION ---
-PSEUDO = "TON_PSEUDO_ICI"  # <--- REMPLACE PAR TON PSEUDO
+PSEUDO = "Calalalopy"  # <--- REMPLACE PAR TON PSEUDO
 # ---------------------
 
 options = Options()
