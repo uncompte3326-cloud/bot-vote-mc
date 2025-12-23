@@ -2,9 +2,8 @@ name: Bot Vote Pixworld
 
 on:
   schedule:
-    # S'exécute toutes les 3 heures à 5 minutes (ex: 03:05, 06:05, etc.)
     - cron: '5 */3 * * *'
-  workflow_dispatch: # Permet de lancer le test manuellement
+  workflow_dispatch:
 
 jobs:
   vote:
@@ -21,7 +20,6 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          # Installation de Chrome et des bibliothèques nécessaires
           pip install -r requirements.txt
 
       - name: Execution du vote
