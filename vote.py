@@ -45,12 +45,42 @@ try:
     driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
     time.sleep(2)
 
-    # 5. Clic sur le site de vote
-    print("Clic sur le lien de vote...")
-    vote_link = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "a[data-vote-id]")))
-    vote_link.click()
+# 5. Attente du menu de sélection du serveur
+    print("Attente du menu de récompense...")
+    time.sleep(20) 
     
-    print("Robot a terminé son travail !")
-
-finally:
-    driver.quit()
+    try:
+        # On cherche le menu de sélection (souvent nommé site_id)
+        select_element = WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.NAME, "site_id"))
+        )
+        
+        from selenium.webdriver.support.ui import Select
+        select = Select(select_element)
+        
+        # On sélectionne Orion
+        try:
+            select.select_by_visible_text("Orion")
+            print("Serveur Orion sélectionné ! ✅")
+            
+            # Un petit délai pour que la sélection soit prise en compte
+            time.sleep(2)
+            
+            # On clique sur le bouton "Confirmer"
+            btn_confirm = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+            driver.execute_script("arguments[0].scrollIntoView();", btn_confirm)
+            btn_confirm.click()
+            print("Récompense réclamée avec succès !")
+            
+        except:
+            print("Impossible de trouver 'Orion' exactement. Tentative de recherche partielle...")
+            # Si jamais c'est écrit différemment, on cherche le mot Orion quand même
+            for option in select.options:
+                if "Orion" in option.text:
+                    select.select_by_visible_text(option.text)
+                    print(f"Serveur {option.text} sélectionné !")
+                    driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+                    break
+            
+    except Exception as e:
+        print("Le menu de sélection n'est pas apparu. Le vote a peut-être échoué ou est déjà validé.")
