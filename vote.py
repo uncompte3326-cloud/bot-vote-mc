@@ -1,16 +1,18 @@
+import os
 import time
-import random
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import Select
 
-# --- CONFIGURATION (REMPLIS ICI) ---
+# --- CONFIGURATION ---
 EMAIL = os.environ.get('MY_EMAIL')
 PASSWORD = os.environ.get('MY_PASSWORD')
-PSEUDO = "Calalalopy"
-# ----------------------------------
+PSEUDO = "Calalalopy"  # <--- METS TON PSEUDO ICI
+SITE_CIBLE = "serveur-minecraft.com"
+# ---------------------
 
 options = Options()
 options.add_argument('--headless')
@@ -21,66 +23,68 @@ options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) App
 driver = webdriver.Chrome(options=options)
 
 try:
-    # 1. Connexion au site
-    print("Connexion à Pixworld...")
-    driver.get("https://pixworld.fr/login")
+    # 1. Connexion via le lien que tu as fourni
+    print("Tentative de connexion sur /user/login...")
+    driver.get("https://pixworld.fr/user/login")
     
-    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, "email"))).send_keys(EMAIL)
-    driver.find_element(By.NAME, "password").send_keys(PASSWORD)
+    # Remplissage de l'email
+    email_field = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, "email")))
+    email_field.send_keys(EMAIL)
+    
+    # Remplissage du mot de passe
+    pass_field = driver.find_element(By.NAME, "password")
+    pass_field.send_keys(PASSWORD)
+    
+    # Clic sur le bouton Connexion
     driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-    
-    time.sleep(3) # Attendre la connexion
-    
-    # 2. Aller sur la page de vote
-    print("Direction page de vote...")
+    print("Connexion réussie !")
+    time.sleep(5)
+
+    # 2. Page de vote
+    print("Accès à la page de vote...")
     driver.get("https://pixworld.fr/vote")
     
-    # 3. Saisie du pseudo (si pas automatique)
-    print(f"Vérification pseudo : {PSEUDO}")
+    # On entre le pseudo pour l'étape 1
     input_pseudo = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "step-1-user")))
     input_pseudo.clear()
     input_pseudo.send_keys(PSEUDO)
-    
-    # 4. Bouton Etape Suivante
     driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-    time.sleep(2)
+    time.sleep(3)
 
-# 5. Attente du menu de sélection du serveur
-    print("Attente du menu de récompense...")
-    time.sleep(20) 
+    # 3. Recherche du site de vote (Site 2)
+    print(f"Recherche de {SITE_CIBLE}...")
+    vote_links = WebDriverWait(driver, 10).until(
+        EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a[data-vote-id]"))
+    )
+    
+    for link in vote_links:
+        if SITE_CIBLE in link.text.lower() or SITE_CIBLE in link.get_attribute("href").lower():
+            print("Site trouvé ! Clic envoyé.")
+            driver.execute_script("arguments[0].click();", link)
+            break
+
+    # 4. Attente du menu pour Orion
+    print("Attente du menu de récompense (30s)...")
+    time.sleep(30) 
     
     try:
-        # On cherche le menu de sélection (souvent nommé site_id)
         select_element = WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.NAME, "site_id"))
         )
-        
-        from selenium.webdriver.support.ui import Select
         select = Select(select_element)
         
-        # On sélectionne Orion
-        try:
-            select.select_by_visible_text("Orion")
-            print("Serveur Orion sélectionné ! ✅")
-            
-            # Un petit délai pour que la sélection soit prise en compte
-            time.sleep(2)
-            
-            # On clique sur le bouton "Confirmer"
-            btn_confirm = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-            driver.execute_script("arguments[0].scrollIntoView();", btn_confirm)
-            btn_confirm.click()
-            print("Récompense réclamée avec succès !")
-            
-        except:
-            print("Impossible de trouver 'Orion' exactement. Tentative de recherche partielle...")
-            # Si jamais c'est écrit différemment, on cherche le mot Orion quand même
-            for option in select.options:
-                if "Orion" in option.text:
-                    select.select_by_visible_text(option.text)
-                    print(f"Serveur {option.text} sélectionné !")
-                    driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-                    break
-            
-    except Exception as e:
-        print("Le menu de sélection n'est pas apparu. Le vote a peut-être échoué ou est déjà validé.")
+        # On cherche Orion dans la liste
+        for option in select.options:
+            if "Orion" in option.text:
+                select.select_by_visible_text(option.text)
+                print(f"Serveur {option.text} sélectionné !")
+                time.sleep(2)
+                driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+                print("Récompense validée ! ✅")
+                break
+    except:
+        print("Menu Orion non détecté (le vote est peut-être déjà en cours).")
+
+finally:
+    driver.quit()
+    print("Session terminée.")
