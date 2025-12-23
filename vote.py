@@ -1,4 +1,4 @@
-import os
+iimport os
 import time
 import random
 import undetected_chromedriver as uc
@@ -15,6 +15,8 @@ SITE_CIBLE = "serveur-minecraft.com"
 
 def human_type(element, text):
     """Simule la frappe d'un humain lettre par lettre"""
+    if not text:
+        return
     for char in text:
         element.send_keys(char)
         time.sleep(random.uniform(0.1, 0.3))
@@ -35,7 +37,7 @@ def run_bot():
         print("Démarrage du navigateur furtif (Mode Fantôme)...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
         
-        # Supprime la preuve que c'est un robot (navigator.webdriver)
+        # Supprime la preuve que c'est un robot
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
         wait = WebDriverWait(driver, 30)
@@ -68,7 +70,6 @@ def run_bot():
         # 3. Recherche du bouton Orion
         print("Recherche du bouton Orion...")
         try:
-            # On cherche par texte ou par classe pour être sûr
             btn_orion = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Orion')] | //a[contains(., 'Orion')]")))
             driver.execute_script("arguments[0].click();", btn_orion)
             print("Bouton Orion cliqué ! ✅")
@@ -77,7 +78,7 @@ def run_bot():
         except:
             print("Bouton Orion non trouvé, vérification du lien de vote...")
 
-        # 4. Vote classique (si Orion n'est pas là)
+        # 4. Vote classique
         links = driver.find_elements(By.CSS_SELECTOR, "a[data-vote-id]")
         voted = False
         for link in links:
@@ -95,4 +96,17 @@ def run_bot():
                 driver.execute_script("arguments[0].click();", btn_final)
                 print("Bouton Orion validé après vote ! ✅")
             except:
-                print
+                print("Orion n'est pas apparu.")
+        else:
+            print("Erreur : Lien de vote introuvable.")
+
+    except Exception as e:
+        print(f"Erreur : {e}")
+    
+    finally:
+        if 'driver' in locals():
+            driver.quit()
+        print("Session terminée.")
+
+if __name__ == "__main__":
+    run_bot()
