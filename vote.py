@@ -17,7 +17,6 @@ def run_bot():
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     
-    # On aide le bot à trouver Google Chrome sur les serveurs GitHub
     try:
         print("Démarrage du navigateur furtif...")
         driver = uc.Chrome(
@@ -29,7 +28,7 @@ def run_bot():
         # 1. Connexion
         print("Accès à la page de connexion...")
         driver.get("https://pixworld.fr/login")
-        time.sleep(10) # Pause pour laisser le camouflage charger
+        time.sleep(10)
 
         print("Saisie des identifiants...")
         email_field = wait.until(EC.presence_of_element_located((By.NAME, "email")))
@@ -38,46 +37,55 @@ def run_bot():
         pass_field = driver.find_element(By.NAME, "password")
         pass_field.send_keys(PASSWORD)
         
-        btn_login = driver.find_element(By.XPATH, "//button[contains(text(), 'Connexion')]")
+        print("Tentative de clic sur le bouton de connexion...")
+        time.sleep(3)
+        # On utilise un sélecteur plus robuste pour le bouton
+        btn_login = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[type='submit']")))
         driver.execute_script("arguments[0].click();", btn_login)
-        print("Connexion envoyée...")
-        time.sleep(7)
+        print("Connexion envoyée !")
+        
+        # On attend de voir si on change de page
+        time.sleep(10)
 
         # 2. Page de vote
         print("Navigation vers la page de vote...")
         driver.get("https://pixworld.fr/vote")
         time.sleep(5)
 
-        # 3. Tentative immédiate sur Orion (si déjà en attente)
-        print("Vérification si le bouton Orion est déjà présent...")
+        # 3. Tentative immédiate sur le bouton Orion
+        print("Recherche du bouton Orion (récompense en attente)...")
         try:
+            # On cherche le bouton vert Orion
             btn_orion = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Orion')]")))
             driver.execute_script("arguments[0].click();", btn_orion)
             print("Bouton Orion cliqué ! ✅ Récompense récupérée.")
             time.sleep(5)
             return 
         except:
-            print("Bouton Orion non trouvé immédiatement, lancement de la procédure de vote...")
+            print("Orion non trouvé, lancement du vote classique...")
 
-        # 4. Clic sur le site de vote si Orion n'était pas là
+        # 4. Vote si Orion n'était pas là
         links = driver.find_elements(By.CSS_SELECTOR, "a[data-vote-id]")
         voted = False
         for link in links:
             if SITE_CIBLE in link.get_attribute("href"):
-                print(f"Clic sur {SITE_CIBLE}...")
+                print(f"Clic sur le site : {SITE_CIBLE}...")
                 driver.execute_script("arguments[0].click();", link)
                 voted = True
                 break
         
         if voted:
-            print("Attente de la détection du vote par Pixworld (15s)...")
+            print("Attente de détection (15s)...")
             time.sleep(15)
-            # Ultime tentative pour cliquer sur Orion après le vote
-            btn_orion_final = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Orion')]")))
-            driver.execute_script("arguments[0].click();", btn_orion_final)
-            print("Bouton Orion cliqué après vote ! ✅")
+            # Ultime vérification pour le bouton Orion après le clic
+            try:
+                btn_orion_final = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Orion')]")))
+                driver.execute_script("arguments[0].click();", btn_orion_final)
+                print("Bouton Orion cliqué après vote ! ✅")
+            except:
+                print("Le bouton Orion n'est pas apparu après le vote.")
         else:
-            print("Erreur : Impossible de trouver le lien du site de vote.")
+            print("Erreur : Site de vote introuvable.")
 
     except Exception as e:
         print(f"Erreur pendant l'exécution : {e}")
