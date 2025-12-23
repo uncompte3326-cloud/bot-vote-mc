@@ -1,22 +1,27 @@
-name: Vote Automatique
+name: Bot Vote Pixworld
 on:
   schedule:
-    # Cela lance le script toutes les 90 minutes environ
-    - cron: '*/90 * * * *'
-  workflow_dispatch: # Permet de lancer le vote manuellement pour tester
+    - cron: '0 */1 * * *'
+  workflow_dispatch:
 
 jobs:
-  build:
+  vote:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - name: Install dependencies
+
+      - name: Install Dependencies
         run: |
           pip install selenium webdriver-manager
-      - name: Run Robot
+
+      - name: Execution du vote
+        env:
+          MY_EMAIL: ${{ secrets.MY_EMAIL }}
+          MY_PASSWORD: ${{ secrets.MY_PASSWORD }}
         run: python vote.py
