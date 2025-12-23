@@ -7,8 +7,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 # --- CONFIGURATION (REMPLIS ICI) ---
-EMAIL = "uncompte.3326@gmail.com" 
-PASSWORD = "Aug896//"
+EMAIL = os.environ.get('MY_EMAIL')
+PASSWORD = os.environ.get('MY_PASSWORD')
 PSEUDO = "Calalalopy"
 # ----------------------------------
 
