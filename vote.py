@@ -14,7 +14,7 @@ SITE_CIBLE = "serveur-minecraft.com"
 # ---------------------
 
 def human_type(element, text):
-    """Tape du texte lettre par lettre avec des pauses aléatoires"""
+    """Simule la frappe d'un humain lettre par lettre"""
     for char in text:
         element.send_keys(char)
         time.sleep(random.uniform(0.1, 0.3))
@@ -24,11 +24,20 @@ def run_bot():
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36')
+    
+    # --- CAMOUFLAGE AVANCÉ ---
+    options.add_argument('--disable-blink-features=AutomationControlled')
+    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
     
     try:
-        print("Démarrage du navigateur furtif...")
+        print("Démarrage du navigateur furtif (Mode Fantôme)...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
+        
+        # Supprime la preuve que c'est un robot (navigator.webdriver)
+        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        
         wait = WebDriverWait(driver, 30)
 
         # 1. Connexion
@@ -45,35 +54,35 @@ def run_bot():
         human_type(pass_field, PASSWORD)
         time.sleep(1)
         
-        print("Validation (Touche Entrée)...")
+        print("Validation par la touche ENTRÉE...")
         pass_field.send_keys(Keys.ENTER)
         
-        print("Connexion envoyée ! Attente de la redirection (20s)...")
+        print("Connexion envoyée ! Attente de redirection (20s)...")
         time.sleep(20)
 
         # 2. Page de vote
-        print("Navigation vers la page de vote...")
+        print("Navigation forcée vers la page de vote...")
         driver.get("https://pixworld.fr/vote")
         time.sleep(10)
 
         # 3. Recherche du bouton Orion
         print("Recherche du bouton Orion...")
         try:
-            # On cherche spécifiquement le bouton qui contient Orion
+            # On cherche par texte ou par classe pour être sûr
             btn_orion = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Orion')] | //a[contains(., 'Orion')]")))
             driver.execute_script("arguments[0].click();", btn_orion)
             print("Bouton Orion cliqué ! ✅")
             time.sleep(5)
             return 
         except:
-            print("Bouton Orion non trouvé immédiatement.")
+            print("Bouton Orion non trouvé, vérification du lien de vote...")
 
-        # 4. Vote si Orion n'était pas là
+        # 4. Vote classique (si Orion n'est pas là)
         links = driver.find_elements(By.CSS_SELECTOR, "a[data-vote-id]")
         voted = False
         for link in links:
             if SITE_CIBLE in link.get_attribute("href"):
-                print(f"Clic sur le lien de vote : {SITE_CIBLE}...")
+                print(f"Clic sur le lien : {SITE_CIBLE}...")
                 driver.execute_script("arguments[0].click();", link)
                 voted = True
                 break
@@ -81,17 +90,9 @@ def run_bot():
         if voted:
             print("Attente de détection du vote (20s)...")
             time.sleep(20)
-            btn_final = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Orion')] | //a[contains(., 'Orion')]")))
-            driver.execute_script("arguments[0].click();", btn_final)
-            print("Bouton Orion validé après vote ! ✅")
-
-    except Exception as e:
-        print(f"Erreur : {e}")
-    
-    finally:
-        if 'driver' in locals():
-            driver.quit()
-        print("Session terminée.")
-
-if __name__ == "__main__":
-    run_bot()
+            try:
+                btn_final = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Orion')] | //a[contains(., 'Orion')]")))
+                driver.execute_script("arguments[0].click();", btn_final)
+                print("Bouton Orion validé après vote ! ✅")
+            except:
+                print
