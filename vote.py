@@ -1,7 +1,6 @@
 import os
 import time
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -12,72 +11,68 @@ PASSWORD = os.environ.get('MY_PASSWORD')
 SITE_CIBLE = "serveur-minecraft.com"
 # ---------------------
 
-options = Options()
-options.add_argument('--headless=new')
-options.add_argument('--no-sandbox')
-options.add_argument('--disable-dev-shm-usage')
-options.add_argument('--disable-blink-features=AutomationControlled')
-options.add_experimental_option("excludeSwitches", ["enable-automation"])
-options.add_experimental_option('useAutomationExtension', False)
-options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-
-driver = webdriver.Chrome(options=options)
-driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-
-try:
-    # 1. Connexion
-    print("Connexion à Pixworld...")
-    driver.get("https://pixworld.fr/login")
+def run_bot():
+    options = uc.ChromeOptions()
+    options.add_argument('--headless')  # Indispensable sur GitHub
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
     
-    email_field = WebDriverWait(driver, 20).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='email']"))
-    )
-    email_field.send_keys(EMAIL)
-    driver.find_element(By.CSS_SELECTOR, "input[type='password']").send_keys(PASSWORD)
-    
-    btn_login = driver.find_element(By.XPATH, "//button[contains(text(), 'Connexion')]")
-    driver.execute_script("arguments[0].click();", btn_login)
-    print("Connecté !")
-    time.sleep(5)
+    # On initialise le driver indétectable
+    driver = uc.Chrome(options=options)
+    wait = WebDriverWait(driver, 25)
 
-    # 2. Page de vote
-    print("Direction la page de vote...")
-    driver.get("https://pixworld.fr/vote")
-    time.sleep(5)
+    try:
+        # 1. Connexion
+        print("Accès à la page de connexion...")
+        driver.get("https://pixworld.fr/login")
+        time.sleep(8) # On laisse le temps au camouflage de s'activer
 
-    # 3. Clic sur le Site 2
-    print(f"Recherche du lien {SITE_CIBLE}...")
-    links = WebDriverWait(driver, 20).until(
-        EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a[data-vote-id]"))
-    )
-    
-    voted = False
-    for link in links:
-        if SITE_CIBLE in link.get_attribute("href") or SITE_CIBLE in link.text:
-            print("Site trouvé ! Clic envoyé.")
-            driver.execute_script("arguments[0].click();", link)
-            voted = True
-            break
-
-    if voted:
-        # 4. Clic sur le bouton Orion (ton image #8)
-        print("Attente de l'apparition du bouton Orion (15s)...")
-        time.sleep(15)
+        print("Remplissage des identifiants...")
+        # On utilise les noms exacts des champs
+        email_field = wait.until(EC.presence_of_element_located((By.NAME, "email")))
+        email_field.send_keys(EMAIL)
         
+        pass_field = driver.find_element(By.NAME, "password")
+        pass_field.send_keys(PASSWORD)
+        
+        btn_login = driver.find_element(By.XPATH, "//button[contains(text(), 'Connexion')]")
+        driver.execute_script("arguments[0].click();", btn_login)
+        print("Formulaire envoyé !")
+        time.sleep(5)
+
+        # 2. Page de vote
+        print("Navigation vers /vote...")
+        driver.get("https://pixworld.fr/vote")
+        time.sleep(5)
+
+        # 3. Vérification du bouton Orion (ton cas actuel)
+        print("Vérification si Orion est déjà prêt...")
         try:
-            # On cherche spécifiquement le bouton qui contient le texte "Orion"
-            btn_orion = WebDriverWait(driver, 20).until(
-                EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Orion')]"))
-            )
+            # On cherche le bouton vert Orion de ton image #8
+            btn_orion = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Orion')]")))
             driver.execute_script("arguments[0].click();", btn_orion)
             print("Bouton Orion cliqué ! ✅")
             time.sleep(5)
-            print("Récompense validée avec succès.")
+            print("Récompense validée !")
+            return # On s'arrête là si ça a marché
         except:
-            print("Le bouton Orion n'est pas apparu. Peut-être que le vote n'a pas été détecté.")
-    else:
-        print("Impossible de trouver le site cible.")
+            print("Orion n'est pas apparu direct, on tente de cliquer sur le site de vote...")
 
-finally:
-    driver.quit()
-    print("Session terminée.")
+        # 4. Si Orion n'était pas là, on clique sur le site de vote
+        links = driver.find_elements(By.CSS_SELECTOR, "a[data-vote-id]")
+        for link in links:
+            if SITE_CIBLE in link.get_attribute("href"):
+                driver.execute_script("arguments[0].click();", link)
+                print("Lien vers serveur-minecraft cliqué !")
+                break
+        
+        # On attend que Pixworld détecte le clic et affiche Orion
+        time.sleep(15)
+        btn_orion_final = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Orion')]")))
+        driver.execute_script("arguments[0].click();", btn_orion_final)
+        print("Bouton Orion cliqué après vote ! ✅")
+
+    except Exception as e:
+        print(f"Erreur pendant l'exécution : {e}")
+        # En cas d'erreur, on enregistre une capture d'écran pour voir le blocage
+        driver.save_screenshot
