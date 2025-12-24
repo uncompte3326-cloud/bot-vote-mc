@@ -58,3 +58,48 @@ def run_bot():
                 driver.close()
         driver.switch_to.window(main_window)
         time.sleep(5)
+
+        # 4. SCAN ET ACTION "FORCE BRUTE"
+        print("Scan intensif d'Orion (30s)...")
+        found = False
+        for i in range(15):
+            # On cherche par texte, par classe, et on clique sur l'élément ET son parent
+            clicked = driver.execute_script("""
+                var targets = Array.from(document.querySelectorAll('button, a, div, span, .btn-success'));
+                var el = targets.find(e => e.innerText && e.innerText.trim().includes('Orion'));
+                if(el) {
+                    el.click();
+                    if(el.parentElement) el.parentElement.click();
+                    return true;
+                }
+                return false;
+            """)
+            
+            if clicked:
+                print(f"🎯 Orion trouvé et cliqué à la tentative {i+1} !")
+                found = True
+                break
+            time.sleep(2)
+
+        # 5. DIAGNOSTIC FINAL (Le plus important)
+        if not found:
+            print("❌ Orion non trouvé. Analyse de la page...")
+            page_text = driver.execute_script("return document.body.innerText;")
+            print("--- CONTENU DE LA PAGE ---")
+            print(page_text[:500] + "...") # Affiche les 500 premiers caractères
+            print("--------------------------")
+        
+        # Capture d'écran pour voir ce que le bot voit
+        driver.save_screenshot("debug_orion.png")
+        print("📸 Capture d'écran 'debug_orion.png' générée.")
+        
+        print("Opération terminée. ✅")
+
+    except Exception as e:
+        print(f"💥 Erreur système : {e}")
+    finally:
+        if driver:
+            driver.quit()
+
+if __name__ == "__main__":
+    run_bot()
