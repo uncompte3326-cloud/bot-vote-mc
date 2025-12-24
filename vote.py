@@ -15,56 +15,46 @@ def run_bot():
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--window-size=1920,1080')
+    # Simulation d'un agent utilisateur humain pour éviter les blocages passifs
+    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36')
     
     driver = None
     try:
-        print("🚀 Mode Héritage & Diagnostic (Lecture du DOM)...")
+        print("🚀 Lancement du Bot Diagnostic (Cible: Orion)...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
         
-        # 1. Login
+        # 1. CONNEXION
         driver.get("https://pixworld.fr/vote")
         time.sleep(10)
         main_window = driver.current_window_handle
-        driver.execute_script(f"document.querySelectorAll('input').forEach(i => {{ if(i.type === 'email') i.value = '{EMAIL}'; if(i.type === 'password') i.value = '{PASSWORD}'; }}); var b = document.querySelector('button[type=\"submit\"]'); if(b) b.click();")
+        
+        print("Tentative de login...")
+        driver.execute_script(f"""
+            document.querySelectorAll('input').forEach(i => {{
+                if(i.type === 'email' || i.name === 'email') i.value = '{EMAIL}';
+                if(i.type === 'password' || i.name === 'password') i.value = '{PASSWORD}';
+            }});
+            var btn = document.querySelector('button[type="submit"], input[type="submit"]');
+            if(btn) btn.click();
+        """)
         time.sleep(15)
 
-        # 2. Vote (Site 2)
-        driver.execute_script(f"var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}')); if(a) {{ a.target = '_blank'; a.click(); }}")
-        time.sleep(15)
+        # 2. DÉCLENCHEMENT VOTE (SITE 2)
+        print("Déclenchement du vote sur le Site 2...")
+        driver.execute_script(f"""
+            var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}'));
+            if(a) {{
+                a.target = '_blank';
+                a.click();
+            }}
+        """)
+        time.sleep(15) # Temps de validation serveur
 
-        # 3. Retour et Scan de Diagnostic
+        # 3. GESTION DES ONGLETS
+        print("Retour sur l'onglet Pixworld...")
         for handle in driver.window_handles:
             if handle != main_window:
                 driver.switch_to.window(handle)
                 driver.close()
         driver.switch_to.window(main_window)
-
-        # ANALYSE DU CONTENU (Pour comprendre pourquoi il ne trouve pas)
-        page_text = driver.execute_script("return document.body.innerText;")
-        if "déjà voté" in page_text.lower():
-            print("📢 Info : Le site dit que tu as déjà voté.")
-        elif "attendez" in page_text.lower() or "secondes" in page_text.lower():
-            print("📢 Info : Un compte à rebours est visible.")
-        
-        # 4. TENTATIVE DE CLIC PAR "SÉLECTEUR UNIVERSEL"
-        # On cherche tous les boutons verts (btn-success) même sans texte
-        print("Tentative de clic sur tous les boutons de succès...")
-        driver.execute_script("""
-            var buttons = document.querySelectorAll('.btn-success, .btn-primary, button, .btn');
-            buttons.forEach(btn => {
-                if(btn.innerText.includes('Orion') || (btn.innerText.length > 0 && btn.innerText.length < 15)) {
-                    btn.click();
-                }
-            });
-        """)
-        
         time.sleep(5)
-        print("Fin du diagnostic. ✅")
-
-    except Exception as e:
-        print(f"Erreur : {e}")
-    finally:
-        if driver: driver.quit()
-
-if __name__ == "__main__":
-    run_bot()
