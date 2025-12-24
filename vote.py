@@ -18,79 +18,74 @@ def run_bot():
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--window-size=1920,1080')
     
+    driver = None
     try:
-        print("Démarrage du mode 'Injection Synchronisée'...")
+        print("Démarrage du mode 'Sélecteur Universel'...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
         wait = WebDriverWait(driver, 40)
 
         # 1. Connexion
         print("Accès à la page de connexion...")
         driver.get("https://pixworld.fr/login")
-        
-        # On attend que le champ email soit VRAIMENT là avant d'injecter
-        print("Attente de l'apparition des champs...")
-        wait.until(EC.presence_of_element_located((By.NAME, "email")))
-        time.sleep(5) # Petite pause sécurité pour le chargement des scripts du site
+        time.sleep(10)
 
-        print("Injection sécurisée des identifiants...")
-        # On utilise une méthode plus sûre pour cibler les champs
-        js_fill = f"""
-            var emailField = document.querySelector('input[name="email"]');
-            var passField = document.querySelector('input[name="password"]');
-            if(emailField && passField) {{
-                emailField.value = '{EMAIL}';
-                passField.value = '{PASSWORD}';
-                return true;
-            }}
-            return false;
-        """
-        success = driver.execute_script(js_fill)
-        
-        if success:
-            print("Champs remplis ! Envoi du formulaire...")
+        print("Recherche des champs par type...")
+        # On cherche par type d'input au lieu du nom 'email'
+        try:
+            email_field = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='email'], input[name*='mail']")))
+            pass_field = driver.find_element(By.CSS_SELECTOR, "input[type='password']")
+            
+            print("Champs trouvés ! Injection...")
+            driver.execute_script(f"arguments[0].value='{EMAIL}';", email_field)
+            driver.execute_script(f"arguments[0].value='{PASSWORD}';", pass_field)
+            
+            time.sleep(2)
+            print("Soumission du formulaire...")
+            # On cherche le bouton submit ou on valide le formulaire
             driver.execute_script("document.querySelector('form').submit();")
-        else:
-            print("Erreur : Champs introuvables lors de l'injection.")
+        except Exception as e:
+            print(f"Échec de localisation des champs : {e}")
+            driver.save_screenshot("debug_login.png")
             return
 
-        print("Connexion envoyée ! Attente de redirection (25s)...")
+        print("Attente de redirection après login (25s)...")
         time.sleep(25)
 
-        # 2. Passage au vote
-        print("Direction la page de vote...")
+        # 2. Page de vote
+        print("Accès à la page de vote...")
         driver.get("https://pixworld.fr/vote")
-        time.sleep(12)
+        time.sleep(10)
 
-        # 3. Récupération Orion (Le but final !)
-        print("Tentative de clic sur Orion...")
-        # On cherche tous les éléments qui contiennent le mot 'Orion' et on clique
+        # 3. Clic Orion
+        print("Tentative de clic Orion...")
         driver.execute_script("""
-            var elements = document.querySelectorAll('button, a, span, div');
-            elements.forEach(function(el) {
+            var found = false;
+            document.querySelectorAll('button, a, span').forEach(el => {
                 if(el.innerText.includes('Orion')) {
                     el.click();
-                    console.log('Clic Orion effectué');
+                    found = true;
                 }
             });
+            return found;
         """)
         
-        # 4. Vote de secours si Orion n'est pas là
-        print("Recherche du lien de vote pour le serveur...")
+        # 4. Vote de secours
+        print("Lancement du vote secondaire...")
         driver.execute_script(f"""
             document.querySelectorAll('a').forEach(a => {{
                 if(a.href.includes('{SITE_CIBLE}')) a.click();
             }});
         """)
         
-        print("Attente finale (10s)...")
         time.sleep(10)
-        print("Procédure terminée avec succès ! ✅")
+        print("Procédure terminée. ✅")
 
     except Exception as e:
-        print(f"Erreur pendant l'exécution : {e}")
+        print(f"Erreur globale : {e}")
+        if driver: driver.save_screenshot("error_final.png")
     
     finally:
-        if 'driver' in locals():
+        if driver:
             driver.quit()
         print("Session terminée.")
 
