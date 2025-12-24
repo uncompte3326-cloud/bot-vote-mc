@@ -19,42 +19,46 @@ def run_bot():
     
     driver = None
     try:
-        print("🔐 Étape 1 : Connexion sécurisée...")
+        print("🔐 Étape 1 : Connexion à Pixworld...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
-        wait = WebDriverWait(driver, 20)
+        wait = WebDriverWait(driver, 30) # On laisse 30s max pour charger
         
-        # Aller sur la page de login directe
+        # 1. Page de Login
         driver.get("https://pixworld.fr/login")
         
-        # Attendre que le champ email soit réellement présent dans le code
-        email_field = wait.until(EC.presence_of_element_property((By.NAME, 'email'), 'type', 'email'))
+        # Attente visuelle du champ email
+        wait.until(EC.visibility_of_element_located((By.NAME, 'email')))
         
-        # Injection des identifiants
+        # Connexion via JS pour éviter les erreurs de focus
         driver.execute_script(f"""
             document.querySelector('input[name="email"]').value = '{EMAIL}';
             document.querySelector('input[name="password"]').value = '{PASSWORD}';
             document.querySelector('button[type="submit"]').click();
         """)
         
-        print("Connexion en cours, attente de redirection...")
+        print("Login envoyé, attente de redirection (10s)...")
         time.sleep(10)
 
-        # Étape 2 : Vote
-        print("🌍 Étape 2 : Page de vote...")
+        # 2. Page de Vote
+        print("🌍 Étape 2 : Lancement du vote...")
         driver.get("https://pixworld.fr/vote")
         time.sleep(5)
         
-        # Clic Site 2
-        driver.execute_script(f"var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}')); if(a) a.click();")
-        print("Vote effectué, attente de 15s pour le serveur...")
+        # On déclenche le Site 2
+        driver.execute_script(f"""
+            var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}'));
+            if(a) a.click();
+        """)
+        print("Vote Site 2 déclenché, attente de validation (15s)...")
         time.sleep(15)
 
-        # Étape 3 : Orion
-        print("🎯 Étape 3 : Sniper Orion...")
-        # On tente de trouver le bouton Orion par tous les moyens possibles
+        # 3. Orion Sniper
+        print("🎯 Étape 3 : Clic sur le bouton Orion...")
+        found = False
         for i in range(10):
+            # On cherche par texte exact "Orion"
             success = driver.execute_script("""
-                var buttons = Array.from(document.querySelectorAll('button, a, .btn, span'));
+                var buttons = Array.from(document.querySelectorAll('button, a, .btn, span, div'));
                 var orion = buttons.find(b => b.innerText && b.innerText.trim() === 'Orion');
                 if(orion) {
                     orion.click();
@@ -63,21 +67,22 @@ def run_bot():
                 return false;
             """)
             if success:
-                print("✅ RÉUSSITE : Orion a été cliqué !")
+                print(f"✅ VICTOIRE : Orion cliqué à la tentative {i+1} !")
+                found = True
                 break
-            print(f"Recherche Orion... ({i+1}/10)")
             time.sleep(2)
 
-        driver.save_screenshot("proof_of_success.png")
+        if not found:
+            print("⚠️ Orion non trouvé. Capture de debug générée.")
+            driver.save_screenshot("debug_final.png")
+
         print("Opération terminée. ✅")
 
     except Exception as e:
         print(f"❌ Erreur : {e}")
-        if driver:
-            driver.save_screenshot("error_debug.png")
+        if driver: driver.save_screenshot("crash_debug.png")
     finally:
-        if driver:
-            driver.quit()
+        if driver: driver.quit()
 
 if __name__ == "__main__":
     run_bot()
