@@ -13,19 +13,19 @@ def run_bot():
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--window-size=1920,1080')
-    # On utilise un User-Agent de Chrome très récent pour éviter le flag "Bot"
+    # Identité Chrome Windows standard pour éviter le flag GitHub
     options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36')
     
     driver = None
     try:
-        print("⚡ [Phase 1] Connexion Flash...")
+        print("⚡ [1/3] Connexion Flash (Injection Instantanée)...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
         
-        # Accès direct au login
+        # On fonce direct sur le login
         driver.get("https://pixworld.fr/login")
-        time.sleep(7) # Temps minimum pour que les champs existent
+        time.sleep(8) 
 
-        # Injection brutale : on ne cherche pas à imiter l'humain, on remplit et on valide
+        # Injection JS brutale pour éviter d'être repéré par le clavier
         driver.execute_script(f"""
             var e = document.querySelector('input[name="email"]');
             var p = document.querySelector('input[name="password"]');
@@ -37,40 +37,42 @@ def run_bot():
             }}
         """)
         
-        print("🚀 [Phase 2] Saut direct vers le vote...")
-        time.sleep(8) 
+        print("🚀 [2/3] Saut direct vers la zone de vote...")
+        time.sleep(10) 
         driver.get("https://pixworld.fr/vote")
         time.sleep(10)
         
-        # Déclenchement du vote Site 2
+        # On déclenche le vote sur le Site 2
         driver.execute_script(f"var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}')); if(a) a.click();")
         
-        print("⌛ [Phase 3] Attente d'assimilation (120s)...")
-        # On ne touche plus à rien pendant 2 minutes. On laisse le serveur bosser.
+        print("⌛ [3/3] Phase d'assimilation critique (120 secondes)...")
+        # On ne touche plus à rien, on laisse le serveur Minecraft et Pixworld se synchroniser
         time.sleep(120)
 
-        # Clic Orion
-        print("🎯 Tentative finale sur Orion...")
+        # Tentative finale sur Orion
+        print("🎯 Scan final pour le bouton Orion...")
         success = driver.execute_script("""
-            var targets = Array.from(document.querySelectorAll('button, a, span, div, .btn'));
-            var orion = targets.find(el => el.innerText && el.innerText.trim().toUpperCase() === 'ORION');
-            if(orion) {
-                orion.click();
+            var elements = Array.from(document.querySelectorAll('button, a, span, div, .btn'));
+            var target = elements.find(el => el.innerText && el.innerText.trim().toUpperCase() === 'ORION');
+            if(target) {
+                target.scrollIntoView({block: 'center'});
+                target.click();
                 return true;
             }
             return false;
         """)
 
         if success:
-            print("✨ VICTOIRE : Orion a été cliqué !")
+            print("✨ VICTOIRE : Le bouton Orion a été activé !")
         else:
-            driver.save_screenshot("derniere_chance_debug.png")
-            print("❌ Orion introuvable. Fin de la tentative.")
+            driver.save_screenshot("ultimate_check.png")
+            print("❌ Orion est resté introuvable. Vérifie 'ultimate_check.png'.")
 
     except Exception as e:
-        print(f"💥 Erreur : {e}")
+        print(f"💥 Erreur fatale : {e}")
     finally:
         if driver: driver.quit()
+        print("Fin du workflow. ✅")
 
 if __name__ == "__main__":
     run_bot()
