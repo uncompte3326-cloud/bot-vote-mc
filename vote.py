@@ -1,6 +1,7 @@
 import os
 import time
 import undetected_chromedriver as uc
+from selenium.webdriver.common.by import By # <-- La ligne qui manquait !
 
 # --- CONFIGURATION ---
 EMAIL = os.environ.get('MY_EMAIL')
@@ -17,17 +18,24 @@ def run_bot():
     
     driver = None
     try:
-        print("🚀 Mode Brise-Mur (Scan des IFrames pour Orion)...")
+        print("🚀 Relance du Mode Brise-Mur (Correction 'By' effectuée)...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
         
-        # 1. Login (Base stable)
+        # 1. Connexion (Stable)
         driver.get("https://pixworld.fr/vote")
         time.sleep(10)
         main_window = driver.current_window_handle
-        driver.execute_script(f"document.querySelectorAll('input').forEach(i => {{ if(i.type === 'email') i.value = '{EMAIL}'; if(i.type === 'password') i.value = '{PASSWORD}'; }}); var b = document.querySelector('button[type=\"submit\"]'); if(b) b.click();")
+        driver.execute_script(f"""
+            document.querySelectorAll('input').forEach(i => {{
+                if(i.type === 'email' || i.name === 'email') i.value = '{EMAIL}';
+                if(i.type === 'password' || i.name === 'password') i.value = '{PASSWORD}';
+            }});
+            var btn = document.querySelector('button[type="submit"], input[type="submit"]');
+            if(btn) btn.click();
+        """)
         time.sleep(15)
 
-        # 2. Clic Site 2
+        # 2. Déclenchement du Site 2
         print("Clic sur le Site 2...")
         driver.execute_script(f"var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}')); if(a) {{ a.target = '_blank'; a.click(); }}")
         time.sleep(10)
@@ -40,17 +48,17 @@ def run_bot():
         driver.switch_to.window(main_window)
         print("Retour sur Pixworld. Début du scan multidimensionnel...")
 
-        # 4. LE SNIPER MULTI-CADRES
+        # 4. LE SNIPER MULTI-CADRES (La correction est ici)
         found = False
-        for attempt in range(20):
-            # A. On cherche d'abord sur la page principale
+        for attempt in range(15):
+            # A. Scan Page Principale
             clicked = driver.execute_script("""
                 var el = Array.from(document.querySelectorAll('button, a, div')).find(e => e.innerText && e.innerText.trim() === 'Orion');
                 if(el) { el.click(); return true; }
                 return false;
             """)
             
-            # B. Si pas trouvé, on scanne TOUTES les Iframes
+            # B. Scan de chaque Iframe présente
             if not clicked:
                 iframes = driver.find_elements(By.TAG_NAME, "iframe")
                 for index, frame in enumerate(iframes):
@@ -61,7 +69,7 @@ def run_bot():
                             if(el) { el.click(); return true; }
                             return false;
                         """)
-                        driver.switch_to.default_content() # On ressort de l'iframe
+                        driver.switch_to.default_content()
                         if clicked: 
                             print(f"🎯 Orion trouvé dans l'Iframe #{index} !")
                             break
@@ -70,7 +78,7 @@ def run_bot():
                         continue
 
             if clicked:
-                print(f"✅ Clic effectué à la tentative {attempt+1} !")
+                print(f"✅ Clic effectué avec succès à la tentative {attempt+1} !")
                 found = True
                 break
             
