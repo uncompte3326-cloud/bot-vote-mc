@@ -1,7 +1,6 @@
 import os
 import time
 import undetected_chromedriver as uc
-from selenium.webdriver.common.by import By
 
 # --- CONFIGURATION ---
 EMAIL = os.environ.get('MY_EMAIL')
@@ -18,89 +17,71 @@ def run_bot():
     
     driver = None
     try:
-        print("🚀 Étape actuelle : Précision du clic Orion...")
+        print("🚀 Phase Finale : Sniper JavaScript sur Orion...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
         
-        # 1. Accès et Login (Méthode stable validée)
+        # 1. Navigation et Login (Stable)
         driver.get("https://pixworld.fr/vote")
         time.sleep(10)
         main_window = driver.current_window_handle
-
-        driver.execute_script(f"""
-            document.querySelectorAll('input').forEach(i => {{
-                if(i.type === 'email' || i.name === 'email') i.value = '{EMAIL}';
-                if(i.type === 'password' || i.name === 'password') i.value = '{PASSWORD}';
-            }});
-            var btn = document.querySelector('button[type="submit"], input[type="submit"]');
-            if(btn) btn.click();
-        """)
+        driver.execute_script(f"document.querySelectorAll('input').forEach(i => {{ if(i.type === 'email') i.value = '{EMAIL}'; if(i.type === 'password') i.value = '{PASSWORD}'; }}); var b = document.querySelector('button[type=\"submit\"]'); if(b) b.click();")
         time.sleep(15)
 
-        # 2. Déclenchement du Site 2 (L'élément clé)
-        print("Ouverture du vote (Site 2)...")
+        # 2. Déclenchement du Site 2
+        print("Ouverture du vote...")
         driver.execute_script(f"var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}')); if(a) {{ a.target = '_blank'; a.click(); }}")
-        time.sleep(12) # On laisse un peu plus de temps pour la validation serveur
+        time.sleep(12)
 
-        # 3. Simulation humaine : Retour et "Réveil" de la page
-        print("Retour sur l'onglet principal et réactivation...")
+        # 3. Retour Onglet et "Réveil" Forcé
         for handle in driver.window_handles:
             if handle != main_window:
                 driver.switch_to.window(handle)
                 driver.close()
         driver.switch_to.window(main_window)
         
-        # On simule un mouvement de scroll pour forcer Pixworld à vérifier l'état du vote
-        driver.execute_script("window.scrollBy(0, 200);")
-        time.sleep(3)
-        driver.execute_script("window.scrollBy(0, -200);")
-        time.sleep(2)
+        # On force un petit scroll et un refresh de la détection
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
+        time.sleep(5)
 
-        # 4. LE SNIPER : Recherche récursive d'Orion
-        print("Scan intensif du bouton de récompense Orion...")
-        success = False
-        for attempt in range(20):
-            # Cette commande JavaScript est "brutale" : elle clique sur tout ce qui ressemble à Orion
-            # même si c'est un bouton, une image ou un texte cliquable.
-            result = driver.execute_script("""
-                var targets = document.querySelectorAll('button, a, div, span, h5, img');
-                var clicked = false;
-                targets.forEach(function(el) {
-                    if (el.innerText && el.innerText.toUpperCase().includes('ORION')) {
+        # 4. L'ATTAQUE SNIPER (Injection JS Directe)
+        print("Exécution du clic forcé sur Orion...")
+        script_sniper = """
+            function sniper() {
+                // On cherche tous les éléments qui contiennent 'Orion'
+                var elements = document.querySelectorAll('button, a, div, span, h5');
+                var found = false;
+                elements.forEach(el => {
+                    if(el.innerText && el.innerText.trim() === 'Orion') {
+                        console.log('Cible verrouillée : Orion');
+                        // On simule TOUS les types de clics possibles
                         el.click();
-                        clicked = true;
-                    } else if (el.alt && el.alt.toUpperCase().includes('ORION')) {
-                        el.click();
-                        clicked = true;
+                        el.dispatchEvent(new MouseEvent('mousedown'));
+                        el.dispatchEvent(new MouseEvent('mouseup'));
+                        el.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+                        found = true;
                     }
                 });
-                return clicked;
-            """)
-            
-            if result:
-                print(f"✅ Tentative {attempt} : Signal de clic envoyé à Orion !")
-                success = True
-                # On ne s'arrête pas au premier clic, on en remet un petit coup par sécurité
-                time.sleep(1)
-            
-            if success and attempt > 5: # On attend quelques clics pour être sûr
+                return found;
+            }
+            return sniper();
+        """
+        
+        # On essaie de sniper toutes les 2 secondes
+        for i in range(10):
+            if driver.execute_script(script_sniper):
+                print(f"🎯 Orion cliqué avec succès à la tentative {i+1} !")
                 break
-            
-            time.sleep(1)
+            else:
+                print(f"Attente apparition Orion... ({i+1}/10)")
+                time.sleep(2)
 
-        # 5. Vérification finale
-        if success:
-            print("Action Orion terminée. Vérification du timer...")
-        else:
-            print("⚠️ Orion n'a pas été détecté visuellement. Tentative de secours...")
-            driver.refresh() # Parfois un refresh après le vote débloque tout
-
+        time.sleep(5)
         print("Opération terminée. ✅")
 
     except Exception as e:
         print(f"Erreur : {e}")
     finally:
-        if driver:
-            driver.quit()
+        if driver: driver.quit()
 
 if __name__ == "__main__":
     run_bot()
