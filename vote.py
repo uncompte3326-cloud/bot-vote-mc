@@ -11,6 +11,12 @@ EMAIL = os.environ.get('MY_EMAIL')
 PASSWORD = os.environ.get('MY_PASSWORD')
 SITE_CIBLE = "serveur-minecraft.com"
 
+def human_type(element, text):
+    """Tape du texte comme un humain avec des délais entre les lettres."""
+    for char in text:
+        element.send_keys(char)
+        time.sleep(random.uniform(0.1, 0.3))
+
 def run_bot():
     options = uc.ChromeOptions()
     options.add_argument('--headless')
@@ -21,80 +27,70 @@ def run_bot():
     
     driver = None
     try:
-        print("🎭 [1/4] Initialisation de la navigation discrète...")
+        print("🎭 [1/4] Navigation discrète via l'accueil...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
+        wait = WebDriverWait(driver, 45)
         
-        # Passage par l'accueil pour chauffer les cookies
         driver.get("https://pixworld.fr/")
-        time.sleep(12)
+        time.sleep(15)
 
-        # Accès au login
-        print("🔐 [2/4] Connexion à l'espace membre...")
+        print("🔐 [2/4] Accès membre et frappe réelle...")
         driver.get("https://pixworld.fr/login")
-        time.sleep(20) 
-
-        # Injection fragmentée (plus humain)
-        driver.execute_script(f"document.querySelector('input[type=\"email\"], [name=\"email\"]').value = '{EMAIL}';")
-        time.sleep(3)
-        driver.execute_script(f"document.querySelector('input[type=\"password\"], [name=\"password\"]').value = '{PASSWORD}';")
-        time.sleep(2)
-        driver.execute_script("document.querySelector('button[type=\"submit\"]').click();")
         
-        print("... Pause d'assimilation session (25s) ...")
-        time.sleep(25)
+        # Attente physique du champ email
+        email_input = wait.until(EC.element_to_be_clickable((By.NAME, "email")))
+        
+        # On clique d'abord pour donner le focus (comme un humain)
+        email_input.click()
+        time.sleep(2)
+        human_type(email_input, EMAIL)
+        
+        time.sleep(2)
+        password_input = driver.find_element(By.NAME, "password")
+        password_input.click()
+        human_type(password_input, PASSWORD)
+        
+        time.sleep(3)
+        login_btn = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        login_btn.click()
+        
+        print("... Pause d'assimilation (30s) ...")
+        time.sleep(30)
 
-        # Accès au vote
-        print("🌍 [3/4] Lancement de la procédure de vote...")
+        print("🌍 [3/4] Procédure de vote...")
         driver.get("https://pixworld.fr/vote")
         time.sleep(15)
         
-        # Clic Site 2
-        driver.execute_script(f"""
-            var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}'));
-            if(a) a.click();
-        """)
+        driver.execute_script(f"var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}')); if(a) a.click();")
         
-        print("✅ Vote Site 2 envoyé. Longue pause d'assimilation (60s)...")
-        time.sleep(60)
+        print("✅ Vote envoyé. Attente de la récompense (90s)...")
+        time.sleep(90)
 
-        # Le Scanner de Boutons
-        print("🎯 [4/4] Recherche de la récompense (Scanner Intelligent)...")
+        print("🎯 [4/4] Scanner final...")
         found = False
-        for i in range(30): # 30 tentatives (90 secondes de guet)
+        for i in range(30):
             success = driver.execute_script("""
                 var targets = Array.from(document.querySelectorAll('button, a.btn, .btn-success, span, div'));
-                
-                // On cherche Orion OU un bouton de succès/validation qui vient d'apparaître
-                var rewardBtn = targets.find(b => 
+                var reward = targets.find(b => 
                     (b.innerText && b.innerText.toUpperCase().includes('ORION')) || 
-                    (b.className && b.className.includes('success')) ||
-                    (b.innerText && b.innerText.toUpperCase().includes('RÉCOMPENSE')) ||
-                    (b.innerText && b.innerText.toUpperCase().includes('VALIDER'))
+                    (b.className && b.className.includes('success'))
                 );
-
-                if(rewardBtn) {
-                    rewardBtn.scrollIntoView({block: 'center'});
-                    rewardBtn.click();
-                    return true;
-                }
+                if(reward) { reward.click(); return true; }
                 return false;
             """)
-            
             if success:
-                print(f"✨ VICTOIRE ! Bouton détecté et cliqué à la tentative {i+1}.")
+                print(f"✨ VICTOIRE ! Récompense validée à la tentative {i+1}.")
                 found = True
                 break
             time.sleep(3)
 
         if not found:
-            print("❌ Bouton introuvable après 90s de scan.")
-            driver.save_screenshot("debug_final_scanner.png")
-
-        print("Opération terminée. ✅")
+            driver.save_screenshot("echec_frappe.png")
+            print("❌ Bouton introuvable.")
 
     except Exception as e:
-        print(f"❌ Erreur système : {e}")
-        if driver: driver.save_screenshot("crash_final.png")
+        print(f"❌ Erreur critique : {e}")
+        if driver: driver.save_screenshot("crash_frappe.png")
     finally:
         if driver: driver.quit()
 
