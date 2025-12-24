@@ -1,7 +1,6 @@
 import os
 import time
 import undetected_chromedriver as uc
-from selenium.webdriver.common.by import By
 
 # --- CONFIGURATION ---
 EMAIL = os.environ.get('MY_EMAIL')
@@ -18,71 +17,67 @@ def run_bot():
     
     driver = None
     try:
-        print("🚀 Mode Sniper de Flux (Attente dynamique d'Orion)...")
+        print("🚀 Mode Brise-Mur (Scan des IFrames pour Orion)...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
         
-        # 1. Connexion stable
+        # 1. Login (Base stable)
         driver.get("https://pixworld.fr/vote")
         time.sleep(10)
         main_window = driver.current_window_handle
-        driver.execute_script(f"""
-            document.querySelectorAll('input').forEach(i => {{
-                if(i.type === 'email' || i.name === 'email') i.value = '{EMAIL}';
-                if(i.type === 'password' || i.name === 'password') i.value = '{PASSWORD}';
-            }});
-            var btn = document.querySelector('button[type="submit"], input[type="submit"]');
-            if(btn) btn.click();
-        """)
+        driver.execute_script(f"document.querySelectorAll('input').forEach(i => {{ if(i.type === 'email') i.value = '{EMAIL}'; if(i.type === 'password') i.value = '{PASSWORD}'; }}); var b = document.querySelector('button[type=\"submit\"]'); if(b) b.click();")
         time.sleep(15)
 
-        # 2. Clic sur le Site 2 pour déclencher le processus
+        # 2. Clic Site 2
         print("Clic sur le Site 2...")
-        driver.execute_script(f"""
-            var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}'));
-            if(a) {{
-                a.target = '_blank';
-                a.click();
-            }}
-        """)
-        
-        # 3. Gestion de l'onglet (On l'ouvre et on le referme vite pour simuler ton geste)
-        time.sleep(5)
+        driver.execute_script(f"var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}')); if(a) {{ a.target = '_blank'; a.click(); }}")
+        time.sleep(10)
+
+        # 3. Retour Onglet
         for handle in driver.window_handles:
             if handle != main_window:
                 driver.switch_to.window(handle)
                 driver.close()
         driver.switch_to.window(main_window)
-        print("Retour sur Pixworld, en attente de l'injection d'Orion...")
+        print("Retour sur Pixworld. Début du scan multidimensionnel...")
 
-        # 4. LE SNIPER : On scanne la page sans bouger
+        # 4. LE SNIPER MULTI-CADRES
         found = False
-        for i in range(30): # On surveille pendant 60 secondes (2s x 30)
-            # On cherche spécifiquement le bouton vert Orion
+        for attempt in range(20):
+            # A. On cherche d'abord sur la page principale
             clicked = driver.execute_script("""
-                var els = document.querySelectorAll('button, a, div, span');
-                for (var el of els) {
-                    if (el.innerText && el.innerText.trim() === 'Orion') {
-                        el.click();
-                        return true;
-                    }
-                }
+                var el = Array.from(document.querySelectorAll('button, a, div')).find(e => e.innerText && e.innerText.trim() === 'Orion');
+                if(el) { el.click(); return true; }
                 return false;
             """)
             
+            # B. Si pas trouvé, on scanne TOUTES les Iframes
+            if not clicked:
+                iframes = driver.find_elements(By.TAG_NAME, "iframe")
+                for index, frame in enumerate(iframes):
+                    try:
+                        driver.switch_to.frame(frame)
+                        clicked = driver.execute_script("""
+                            var el = Array.from(document.querySelectorAll('button, a, div')).find(e => e.innerText && e.innerText.trim() === 'Orion');
+                            if(el) { el.click(); return true; }
+                            return false;
+                        """)
+                        driver.switch_to.default_content() # On ressort de l'iframe
+                        if clicked: 
+                            print(f"🎯 Orion trouvé dans l'Iframe #{index} !")
+                            break
+                    except:
+                        driver.switch_to.default_content()
+                        continue
+
             if clicked:
-                print(f"🎯 Orion détecté et cliqué à la seconde {i*2} !")
+                print(f"✅ Clic effectué à la tentative {attempt+1} !")
                 found = True
                 break
             
-            if i % 5 == 0:
-                print(f"Toujours en attente... ({i*2}s)")
-            time.sleep(2)
+            time.sleep(3)
+            if attempt % 3 == 0: print(f"Scan en cours... ({attempt*3}s)")
 
-        if not found:
-            print("⚠️ Orion n'est pas apparu dynamiquement.")
-        
-        time.sleep(5)
-        print("Fin de session. ✅")
+        print("Opération terminée. ✅")
 
     except Exception as e:
         print(f"Erreur : {e}")
