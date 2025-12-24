@@ -19,52 +19,75 @@ def run_bot():
     options.add_argument('--window-size=1920,1080')
     
     try:
-        print("Démarrage du mode 'Injection Directe'...")
+        print("Démarrage du mode 'Injection Synchronisée'...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
-        wait = WebDriverWait(driver, 30)
+        wait = WebDriverWait(driver, 40)
 
-        # 1. Connexion par injection JavaScript (Indétectable)
+        # 1. Connexion
         print("Accès à la page de connexion...")
         driver.get("https://pixworld.fr/login")
-        time.sleep(10)
-
-        print("Injection des identifiants dans le système...")
-        # On remplit les champs directement via le code de la page
-        driver.execute_script(f"document.getElementsByName('email')[0].value='{EMAIL}';")
-        driver.execute_script(f"document.getElementsByName('password')[0].value='{PASSWORD}';")
-        time.sleep(2)
         
-        print("Soumission forcée du formulaire...")
-        driver.execute_script("document.querySelector('form').submit();")
-        
-        print("Attente de validation (20s)...")
-        time.sleep(20)
+        # On attend que le champ email soit VRAIMENT là avant d'injecter
+        print("Attente de l'apparition des champs...")
+        wait.until(EC.presence_of_element_located((By.NAME, "email")))
+        time.sleep(5) # Petite pause sécurité pour le chargement des scripts du site
 
-        # 2. Saut direct vers la page Orion (pour gagner du temps)
-        print("Navigation vers le profil de vote...")
+        print("Injection sécurisée des identifiants...")
+        # On utilise une méthode plus sûre pour cibler les champs
+        js_fill = f"""
+            var emailField = document.querySelector('input[name="email"]');
+            var passField = document.querySelector('input[name="password"]');
+            if(emailField && passField) {{
+                emailField.value = '{EMAIL}';
+                passField.value = '{PASSWORD}';
+                return true;
+            }}
+            return false;
+        """
+        success = driver.execute_script(js_fill)
+        
+        if success:
+            print("Champs remplis ! Envoi du formulaire...")
+            driver.execute_script("document.querySelector('form').submit();")
+        else:
+            print("Erreur : Champs introuvables lors de l'injection.")
+            return
+
+        print("Connexion envoyée ! Attente de redirection (25s)...")
+        time.sleep(25)
+
+        # 2. Passage au vote
+        print("Direction la page de vote...")
         driver.get("https://pixworld.fr/vote")
-        time.sleep(10)
+        time.sleep(12)
 
-        # 3. Récupération de la récompense
+        # 3. Récupération Orion (Le but final !)
         print("Tentative de clic sur Orion...")
-        try:
-            # On cherche tous les boutons verts de récompense
-            driver.execute_script("document.querySelectorAll('button, a').forEach(el => { if(el.innerText.includes('Orion')) el.click(); });")
-            print("Commande de clic Orion envoyée ! ✅")
-        except:
-            print("Le bouton Orion n'a pas pu être injecté.")
-
-        # 4. Vote de secours
-        print("Lancement du vote de secours...")
-        driver.execute_script(f"document.querySelectorAll('a').forEach(a => {{ if(a.href.includes('{SITE_CIBLE}')) a.click(); }});")
-        time.sleep(15)
+        # On cherche tous les éléments qui contiennent le mot 'Orion' et on clique
+        driver.execute_script("""
+            var elements = document.querySelectorAll('button, a, span, div');
+            elements.forEach(function(el) {
+                if(el.innerText.includes('Orion')) {
+                    el.click();
+                    console.log('Clic Orion effectué');
+                }
+            });
+        """)
         
-        # Ultime tentative Orion après vote
-        driver.execute_script("document.querySelectorAll('button, a').forEach(el => {{ if(el.innerText.includes('Orion')) el.click(); }});")
-        print("Fin de la procédure d'injection.")
+        # 4. Vote de secours si Orion n'est pas là
+        print("Recherche du lien de vote pour le serveur...")
+        driver.execute_script(f"""
+            document.querySelectorAll('a').forEach(a => {{
+                if(a.href.includes('{SITE_CIBLE}')) a.click();
+            }});
+        """)
+        
+        print("Attente finale (10s)...")
+        time.sleep(10)
+        print("Procédure terminée avec succès ! ✅")
 
     except Exception as e:
-        print(f"Erreur : {e}")
+        print(f"Erreur pendant l'exécution : {e}")
     
     finally:
         if 'driver' in locals():
