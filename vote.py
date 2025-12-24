@@ -2,104 +2,70 @@ import os
 import time
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 # --- CONFIGURATION ---
 EMAIL = os.environ.get('MY_EMAIL')
 PASSWORD = os.environ.get('MY_PASSWORD')
 SITE_CIBLE = "serveur-minecraft.com"
-# ---------------------
 
 def run_bot():
     options = uc.ChromeOptions()
     options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--window-size=1920,1080')
-    # Simulation d'un agent utilisateur humain pour éviter les blocages passifs
-    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36')
+    driver = uc.Chrome(options=options)
     
-    driver = None
     try:
-        print("🚀 Lancement du Bot Diagnostic (Cible: Orion)...")
-        driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
+        # 1. CONNEXION FORCÉE
+        print("🔐 Phase 1 : Connexion à Pixworld...")
+        driver.get("https://pixworld.fr/login") # On va direct sur la page login
+        time.sleep(5)
         
-        # 1. CONNEXION
-        driver.get("https://pixworld.fr/vote")
-        time.sleep(10)
-        main_window = driver.current_window_handle
-        
-        print("Tentative de login...")
+        # On remplit les champs un par un avec vérification
         driver.execute_script(f"""
-            document.querySelectorAll('input').forEach(i => {{
+            var inputs = document.querySelectorAll('input');
+            inputs.forEach(i => {{
                 if(i.type === 'email' || i.name === 'email') i.value = '{EMAIL}';
                 if(i.type === 'password' || i.name === 'password') i.value = '{PASSWORD}';
             }});
-            var btn = document.querySelector('button[type="submit"], input[type="submit"]');
-            if(btn) btn.click();
+            document.querySelector('button[type="submit"]').click();
         """)
-        time.sleep(15)
+        print("Attente de validation du compte (10s)...")
+        time.sleep(10)
 
-        # 2. DÉCLENCHEMENT VOTE (SITE 2)
-        print("Déclenchement du vote sur le Site 2...")
-        driver.execute_script(f"""
-            var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}'));
-            if(a) {{
-                a.target = '_blank';
-                a.click();
-            }}
-        """)
-        time.sleep(15) # Temps de validation serveur
-
-        # 3. GESTION DES ONGLETS
-        print("Retour sur l'onglet Pixworld...")
-        for handle in driver.window_handles:
-            if handle != main_window:
-                driver.switch_to.window(handle)
-                driver.close()
-        driver.switch_to.window(main_window)
+        # 2. ALLER SUR LA PAGE DE VOTE
+        print("🌍 Phase 2 : Accès à la page de vote...")
+        driver.get("https://pixworld.fr/vote")
         time.sleep(5)
 
-        # 4. SCAN ET ACTION "FORCE BRUTE"
-        print("Scan intensif d'Orion (30s)...")
+        # 3. CLIQUER SUR LE SITE 2
+        print("🖱️ Phase 3 : Clic sur le Site 2...")
+        driver.execute_script(f"var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}')); if(a) a.click();")
+        time.sleep(15) # On attend que le vote soit validé par le serveur
+
+        # 4. LE CLIC FINAL SUR ORION
+        print("🎯 Phase 4 : Sniper Orion...")
         found = False
-        for i in range(15):
-            # On cherche par texte, par classe, et on clique sur l'élément ET son parent
+        for i in range(10):
+            # On cherche Orion partout (même dans les recoins du site connecté)
             clicked = driver.execute_script("""
-                var targets = Array.from(document.querySelectorAll('button, a, div, span, .btn-success'));
-                var el = targets.find(e => e.innerText && e.innerText.trim().includes('Orion'));
-                if(el) {
-                    el.click();
-                    if(el.parentElement) el.parentElement.click();
-                    return true;
-                }
+                var btn = Array.from(document.querySelectorAll('button, a, .btn')).find(el => el.innerText.includes('Orion'));
+                if(btn) { btn.click(); return true; }
                 return false;
             """)
-            
             if clicked:
-                print(f"🎯 Orion trouvé et cliqué à la tentative {i+1} !")
+                print("✅ Orion cliqué ! Récompense envoyée.")
                 found = True
                 break
+            print(f"Attente apparition bouton... ({i*2}s)")
             time.sleep(2)
 
-        # 5. DIAGNOSTIC FINAL (Le plus important)
-        if not found:
-            print("❌ Orion non trouvé. Analyse de la page...")
-            page_text = driver.execute_script("return document.body.innerText;")
-            print("--- CONTENU DE LA PAGE ---")
-            print(page_text[:500] + "...") # Affiche les 500 premiers caractères
-            print("--------------------------")
-        
-        # Capture d'écran pour voir ce que le bot voit
-        driver.save_screenshot("debug_orion.png")
-        print("📸 Capture d'écran 'debug_orion.png' générée.")
-        
-        print("Opération terminée. ✅")
+        driver.save_screenshot("final_check.png")
+        print("🏁 Workflow terminé.")
 
-    except Exception as e:
-        print(f"💥 Erreur système : {e}")
     finally:
-        if driver:
-            driver.quit()
+        driver.quit()
 
 if __name__ == "__main__":
     run_bot()
