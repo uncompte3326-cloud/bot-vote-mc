@@ -18,10 +18,10 @@ def run_bot():
     
     driver = None
     try:
-        print("🚀 Mode Sniper de Précision (Force Visuelle)...")
+        print("🚀 Mode Contrôle Total (Simulation d'activation forcée)...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
         
-        # 1. Login (Base stable)
+        # 1. Login (Stable)
         driver.get("https://pixworld.fr/vote")
         time.sleep(10)
         main_window = driver.current_window_handle
@@ -39,51 +39,53 @@ def run_bot():
                 driver.close()
         driver.switch_to.window(main_window)
         
-        # --- LA NOUVEAUTÉ : MISE EN LUMIÈRE ---
-        print("Préparation de la zone de clic...")
+        # --- PHASE D'ACTIVATION FORCÉE ---
+        print("Activation de la zone de récompense...")
+        # On simule des clics tout autour de la zone centrale pour "réveiller" le script de Pixworld
+        driver.execute_script("""
+            for(let i=0; i<5; i++) {
+                let x = window.innerWidth / 2;
+                let y = (window.innerHeight / 2) + (i * 20);
+                let el = document.elementFromPoint(x, y);
+                if(el) el.click();
+            }
+        """)
+        time.sleep(5)
+
+        # 4. SNIPER PAR CLASSE ET TEXTE
+        print("Scan final Orion...")
+        # On utilise une boucle qui cherche n'importe quel élément contenant "Orion" 
+        # ou ayant une couleur de bouton de succès (souvent 'btn-success' ou 'btn-primary')
         found = False
         for attempt in range(15):
-            # Script JS qui cherche Orion, le fait clignoter, le centre et clique
-            # On cherche dans le document principal ET les iframes via JS direct
-            script_force_clic = """
-            function findAndClickOrion(root) {
-                var els = root.querySelectorAll('button, a, div, span');
-                for (var el of els) {
-                    if (el.innerText && el.innerText.trim() === 'Orion') {
-                        // 1. On le rend visible de force (au cas où il est caché par un overlay)
-                        el.style.display = 'block';
-                        el.style.visibility = 'visible';
-                        el.style.zIndex = '9999';
-                        // 2. On le centre dans l'écran
-                        el.scrollIntoView({block: "center"});
-                        // 3. On clique réellement
-                        el.click();
+            success = driver.execute_script("""
+                function finalShot() {
+                    // On cherche par texte exact, puis par partie de texte
+                    var targets = Array.from(document.querySelectorAll('button, a, div, span'));
+                    var orion = targets.find(e => e.innerText && e.innerText.trim().includes('Orion'));
+                    
+                    if (orion) {
+                        orion.scrollIntoView({block: 'center'});
+                        orion.click();
+                        // On tente aussi de cliquer sur son parent si c'est un bouton stylisé
+                        if (orion.parentElement) orion.parentElement.click();
                         return true;
                     }
+                    return false;
                 }
-                // Chercher dans les iframes
-                var frames = root.querySelectorAll('iframe');
-                for (var f of frames) {
-                    try {
-                        if (findAndClickOrion(f.contentDocument)) return true;
-                    } catch(e) {}
-                }
-                return false;
-            }
-            return findAndClickOrion(document);
-            """
+                return finalShot();
+            """)
             
-            if driver.execute_script(script_force_clic):
-                print(f"🎯 Orion localisé, centré et cliqué à la tentative {attempt+1} !")
+            if success:
+                print(f"🎯 Cible touchée à la tentative {attempt+1} !")
                 found = True
                 break
-            
             time.sleep(3)
-            if attempt % 3 == 0: print(f"Recherche visuelle... ({attempt*3}s)")
 
         if not found:
-            print("⚠️ Bouton Orion introuvable après scan visuel.")
+            print("⚠️ Échec de la localisation. Vérification manuelle requise.")
 
+        time.sleep(5)
         print("Opération terminée. ✅")
 
     except Exception as e:
