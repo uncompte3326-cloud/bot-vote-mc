@@ -1,12 +1,13 @@
 import os
 import time
+import random
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
 
 # --- CONFIGURATION ---
 EMAIL = os.environ.get('MY_EMAIL')
 PASSWORD = os.environ.get('MY_PASSWORD')
-SITE_CIBLE = "serveur-minecraft.com"
 # ---------------------
 
 def run_bot():
@@ -18,57 +19,57 @@ def run_bot():
     
     driver = None
     try:
-        print("🚀 Démarrage de l'Infiltration Directe...")
+        print("🚀 Lancement de la Phase Finale (Simulation Humaine)...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
+        actions = ActionChains(driver)
+
+        # 1. Connexion forcée
+        driver.get("https://pixworld.fr/login")
+        time.sleep(10)
         
-        # 1. On va directement sur la page de VOTE (parfois ça bypass le login check)
-        print("Navigation directe vers la zone de vote...")
-        driver.get("https://pixworld.fr/vote")
+        print("Injection des identifiants...")
+        driver.execute_script(f"""
+            document.querySelector('input[type="email"]').value = '{EMAIL}';
+            document.querySelector('input[type="password"]').value = '{PASSWORD}';
+            document.querySelector('form').submit();
+        """)
         time.sleep(15)
 
-        # 2. Si on n'est pas connecté, on injecte les identifiants n'importe où sur la page
-        print("Tentative d'injection forcée (Login universel)...")
-        # Ce script cherche les champs même s'ils sont cachés ou dans des fenêtres surgissantes
-        force_login = f"""
-            var inputs = document.querySelectorAll('input');
-            if (inputs.length === 0) {{ 
-                window.location.href = 'https://pixworld.fr/login'; 
-            }} else {{
-                inputs.forEach(function(i) {{
-                    if(i.type === 'email' || i.name === 'email') i.value = '{EMAIL}';
-                    if(i.type === 'password' || i.name === 'password') i.value = '{PASSWORD}';
-                }});
-                var btn = document.querySelector('button[type="submit"], input[type="submit"]');
-                if(btn) btn.click();
-                else document.querySelector('form').submit();
-            }}
-        """
-        driver.execute_script(force_login)
-        time.sleep(20)
-
-        # 3. On retourne au vote après la tentative de login
+        # 2. Zone de vote avec simulation de mouvement
+        print("Accès à la zone de vote...")
         driver.get("https://pixworld.fr/vote")
         time.sleep(10)
 
-        # 4. Clic Orion Ultra-Large
-        print("Ciblage du bouton Orion...")
-        # On cherche Orion dans TOUT le document, même les textes cachés
-        driver.execute_script("""
-            var all = document.querySelectorAll('*');
-            for (var i = 0; i < all.length; i++) {
-                if (all[i].innerText && all[i].innerText.includes('Orion')) {
-                    all[i].click();
-                    console.log('Orion cliqué');
-                }
+        # 3. Simulation de mouvement de souris sur le bouton Orion
+        print("Tentative de déclenchement du timer...")
+        script_final = """
+            var target = document.evaluate("//button[contains(., 'Orion')] | //a[contains(., 'Orion')]", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            if(target) {
+                target.scrollIntoView();
+                // On simule un vrai événement de souris
+                var ev = new MouseEvent('click', { 'view': window, 'bubbles': True, 'cancelable': True });
+                target.dispatchEvent(ev);
+                return "CLIC_OK";
             }
+            return "NON_TROUVE";
+        """
+        result = driver.execute_script(script_final)
+        print(f"Action sur Orion : {result}")
+
+        # 4. Forçage du lien de vote (Site 2)
+        print("Déclenchement du Site 2...")
+        driver.execute_script("""
+            var links = document.querySelectorAll('a[data-vote-id]');
+            links.forEach(a => {
+                if(a.href.includes('serveur-minecraft.com')) {
+                    a.click();
+                }
+            });
         """)
         
-        # 5. Vote de secours
-        print("Finalisation du vote...")
-        driver.execute_script(f"document.querySelectorAll('a').forEach(a => {{ if(a.href.includes('{SITE_CIBLE}')) a.click(); }});")
-        
-        time.sleep(10)
-        print("Opération terminée. ✅")
+        print("Attente de validation serveur (30s)...")
+        time.sleep(30)
+        print("Procédure terminée. ✅")
 
     except Exception as e:
         print(f"Erreur : {e}")
