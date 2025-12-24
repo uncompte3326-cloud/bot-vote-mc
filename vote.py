@@ -1,6 +1,7 @@
 import os
 import time
 import undetected_chromedriver as uc
+from selenium.webdriver.common.by import By
 
 # --- CONFIGURATION ---
 EMAIL = os.environ.get('MY_EMAIL')
@@ -17,66 +18,71 @@ def run_bot():
     
     driver = None
     try:
-        print("🚀 Phase Finale : Sniper JavaScript sur Orion...")
+        print("🚀 Mode Sniper de Flux (Attente dynamique d'Orion)...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
         
-        # 1. Navigation et Login (Stable)
+        # 1. Connexion stable
         driver.get("https://pixworld.fr/vote")
         time.sleep(10)
         main_window = driver.current_window_handle
-        driver.execute_script(f"document.querySelectorAll('input').forEach(i => {{ if(i.type === 'email') i.value = '{EMAIL}'; if(i.type === 'password') i.value = '{PASSWORD}'; }}); var b = document.querySelector('button[type=\"submit\"]'); if(b) b.click();")
+        driver.execute_script(f"""
+            document.querySelectorAll('input').forEach(i => {{
+                if(i.type === 'email' || i.name === 'email') i.value = '{EMAIL}';
+                if(i.type === 'password' || i.name === 'password') i.value = '{PASSWORD}';
+            }});
+            var btn = document.querySelector('button[type="submit"], input[type="submit"]');
+            if(btn) btn.click();
+        """)
         time.sleep(15)
 
-        # 2. Déclenchement du Site 2
-        print("Ouverture du vote...")
-        driver.execute_script(f"var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}')); if(a) {{ a.target = '_blank'; a.click(); }}")
-        time.sleep(12)
-
-        # 3. Retour Onglet et "Réveil" Forcé
+        # 2. Clic sur le Site 2 pour déclencher le processus
+        print("Clic sur le Site 2...")
+        driver.execute_script(f"""
+            var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}'));
+            if(a) {{
+                a.target = '_blank';
+                a.click();
+            }}
+        """)
+        
+        # 3. Gestion de l'onglet (On l'ouvre et on le referme vite pour simuler ton geste)
+        time.sleep(5)
         for handle in driver.window_handles:
             if handle != main_window:
                 driver.switch_to.window(handle)
                 driver.close()
         driver.switch_to.window(main_window)
-        
-        # On force un petit scroll et un refresh de la détection
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
-        time.sleep(5)
+        print("Retour sur Pixworld, en attente de l'injection d'Orion...")
 
-        # 4. L'ATTAQUE SNIPER (Injection JS Directe)
-        print("Exécution du clic forcé sur Orion...")
-        script_sniper = """
-            function sniper() {
-                // On cherche tous les éléments qui contiennent 'Orion'
-                var elements = document.querySelectorAll('button, a, div, span, h5');
-                var found = false;
-                elements.forEach(el => {
-                    if(el.innerText && el.innerText.trim() === 'Orion') {
-                        console.log('Cible verrouillée : Orion');
-                        // On simule TOUS les types de clics possibles
+        # 4. LE SNIPER : On scanne la page sans bouger
+        found = False
+        for i in range(30): # On surveille pendant 60 secondes (2s x 30)
+            # On cherche spécifiquement le bouton vert Orion
+            clicked = driver.execute_script("""
+                var els = document.querySelectorAll('button, a, div, span');
+                for (var el of els) {
+                    if (el.innerText && el.innerText.trim() === 'Orion') {
                         el.click();
-                        el.dispatchEvent(new MouseEvent('mousedown'));
-                        el.dispatchEvent(new MouseEvent('mouseup'));
-                        el.dispatchEvent(new MouseEvent('click', {bubbles: true}));
-                        found = true;
+                        return true;
                     }
-                });
-                return found;
-            }
-            return sniper();
-        """
-        
-        # On essaie de sniper toutes les 2 secondes
-        for i in range(10):
-            if driver.execute_script(script_sniper):
-                print(f"🎯 Orion cliqué avec succès à la tentative {i+1} !")
+                }
+                return false;
+            """)
+            
+            if clicked:
+                print(f"🎯 Orion détecté et cliqué à la seconde {i*2} !")
+                found = True
                 break
-            else:
-                print(f"Attente apparition Orion... ({i+1}/10)")
-                time.sleep(2)
+            
+            if i % 5 == 0:
+                print(f"Toujours en attente... ({i*2}s)")
+            time.sleep(2)
 
+        if not found:
+            print("⚠️ Orion n'est pas apparu dynamiquement.")
+        
         time.sleep(5)
-        print("Opération terminée. ✅")
+        print("Fin de session. ✅")
 
     except Exception as e:
         print(f"Erreur : {e}")
