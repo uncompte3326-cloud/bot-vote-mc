@@ -2,6 +2,7 @@ import os
 import time
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
 
 # --- CONFIGURATION ---
 EMAIL = os.environ.get('MY_EMAIL')
@@ -18,15 +19,15 @@ def run_bot():
     
     driver = None
     try:
-        print("🚀 Mode Infiltration + Déblocage Onglet...")
+        print("🚀 Mode Infiltration Finale + Force Orion...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
         
-        # 1. Page de vote directe
+        # 1. Page de vote
         driver.get("https://pixworld.fr/vote")
         time.sleep(10)
         main_window = driver.current_window_handle
 
-        # 2. Login universel (Base fonctionnelle)
+        # 2. Login (Méthode validée)
         driver.execute_script(f"""
             document.querySelectorAll('input').forEach(i => {{
                 if(i.type === 'email' || i.name === 'email') i.value = '{EMAIL}';
@@ -37,44 +38,59 @@ def run_bot():
         """)
         time.sleep(15)
 
-        # 3. CLIC SITE 2 (Ouverture d'onglet réelle)
-        print("Ouverture du Site 2 dans un nouvel onglet...")
-        driver.execute_script(f"""
-            var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}'));
-            if(a) {{
-                a.target = '_blank';
-                a.click();
-            }}
-        """)
-        time.sleep(10) # On laisse l'onglet de vote ouvert 10s
+        # 3. CLIC SITE 2
+        print("Déclenchement du Site 2...")
+        driver.execute_script(f"var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}')); if(a) {{ a.target = '_blank'; a.click(); }}")
+        time.sleep(10)
 
-        # 4. RETOUR ET FERMETURE (Simule le comportement humain)
-        print("Fermeture de l'onglet de vote et retour sur Pixworld...")
+        # 4. RETOUR ET FOCUS
+        print("Retour sur l'onglet principal...")
         for handle in driver.window_handles:
             if handle != main_window:
                 driver.switch_to.window(handle)
                 driver.close()
-        
         driver.switch_to.window(main_window)
-        time.sleep(5) # Pause pour laisser le script de Pixworld s'actualiser
+        
+        # PETITE ASTUCE : On fait défiler la page pour simuler une activité
+        driver.execute_script("window.scrollTo(0, 500);")
+        time.sleep(5)
 
-        # 5. SNIPER ORION
-        print("Scan intensif du bouton Orion...")
-        for i in range(20):
-            clicked = driver.execute_script("""
-                var elements = document.querySelectorAll('button, a, span, div, h5');
-                for (var el of elements) {
-                    if (el.innerText && el.innerText.includes('Orion')) {
-                        el.click();
-                        return true;
-                    }
+        # 5. SCAN ET CLIC PHYSIQUE
+        print("Recherche chirurgicale d'Orion...")
+        # On tente de trouver l'élément et de cliquer dessus via ActionChains (clic simulé)
+        found = False
+        for i in range(15):
+            # Script pour trouver le centre du bouton Orion
+            coords = driver.execute_script("""
+                var el = Array.from(document.querySelectorAll('button, a, span, div, h5')).find(e => e.innerText && e.innerText.includes('Orion'));
+                if (el) {
+                    el.scrollIntoView();
+                    var rect = el.getBoundingClientRect();
+                    return {x: rect.left + rect.width/2, y: rect.top + rect.height/2};
                 }
-                return false;
+                return null;
             """)
-            if clicked:
-                print(f"🎯 Orion trouvé et cliqué à la tentative {i} !")
+            
+            if coords:
+                print(f"🎯 Bouton Orion détecté aux coordonnées : {coords}")
+                # On utilise ActionChains pour un vrai clic
+                actions = ActionChains(driver)
+                # Note: en headless, on utilise plutôt le clic JS car ActionChains peut être capricieux
+                driver.execute_script("""
+                    var el = Array.from(document.querySelectorAll('*')).find(e => e.innerText && e.innerText.includes('Orion'));
+                    el.style.border = '5px solid red'; // Debug visuel interne
+                    el.click();
+                """)
+                found = True
                 break
-            time.sleep(1)
+            time.sleep(2)
+
+        if found:
+            print("✅ Clic Orion envoyé avec succès.")
+        else:
+            print("⚠️ Bouton non détecté. Tentative de 'Force Refresh' de la zone...")
+            driver.execute_script("location.reload();")
+            time.sleep(5)
 
         print("Opération terminée. ✅")
 
