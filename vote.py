@@ -11,86 +11,75 @@ EMAIL = os.environ.get('MY_EMAIL')
 PASSWORD = os.environ.get('MY_PASSWORD')
 SITE_CIBLE = "serveur-minecraft.com"
 
-def human_type(element, text):
-    """Tape du texte comme un humain avec des délais entre les lettres."""
-    for char in text:
-        element.send_keys(char)
-        time.sleep(random.uniform(0.1, 0.3))
-
 def run_bot():
     options = uc.ChromeOptions()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--window-size=1920,1080')
-    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36')
+    # On utilise un profil Chrome très standard pour passer inaperçu
+    options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36')
     
     driver = None
     try:
-        print("🎭 [1/4] Navigation discrète via l'accueil...")
+        print("🎭 [1/4] Connexion furtive...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
-        wait = WebDriverWait(driver, 45)
+        wait = WebDriverWait(driver, 60) # On est très patient
         
-        driver.get("https://pixworld.fr/")
-        time.sleep(15)
-
-        print("🔐 [2/4] Accès membre et frappe réelle...")
+        # Étape 1 : On va sur le login et on ATTEND que la page soit stable
         driver.get("https://pixworld.fr/login")
-        
-        # Attente physique du champ email
-        email_input = wait.until(EC.element_to_be_clickable((By.NAME, "email")))
-        
-        # On clique d'abord pour donner le focus (comme un humain)
-        email_input.click()
+        time.sleep(15) 
+
+        # Étape 2 : Saisie caractère par caractère (comme toi au clavier)
+        print("⌨️ Simulation de frappe humaine...")
+        email_field = wait.until(EC.element_to_be_clickable((By.NAME, "email")))
+        email_field.click() # On clique pour activer le champ
+        for char in EMAIL:
+            email_field.send_keys(char)
+            time.sleep(random.uniform(0.1, 0.3)) # Délai aléatoire entre les touches
+
         time.sleep(2)
-        human_type(email_input, EMAIL)
         
-        time.sleep(2)
-        password_input = driver.find_element(By.NAME, "password")
-        password_input.click()
-        human_type(password_input, PASSWORD)
-        
+        pass_field = driver.find_element(By.NAME, "password")
+        pass_field.click()
+        for char in PASSWORD:
+            pass_field.send_keys(char)
+            time.sleep(random.uniform(0.1, 0.3))
+
         time.sleep(3)
-        login_btn = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        login_btn.click()
+        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
         
-        print("... Pause d'assimilation (30s) ...")
+        # Étape 3 : On laisse le site "digérer" la connexion
+        print("🧘 Assimilation de la session (30s)...")
         time.sleep(30)
 
-        print("🌍 [3/4] Procédure de vote...")
+        # Étape 4 : Vote et Orion
+        print("🌍 Passage au vote...")
         driver.get("https://pixworld.fr/vote")
-        time.sleep(15)
+        time.sleep(20)
         
+        # Clic sur le site de vote
         driver.execute_script(f"var a = Array.from(document.querySelectorAll('a')).find(el => el.href.includes('{SITE_CIBLE}')); if(a) a.click();")
         
-        print("✅ Vote envoyé. Attente de la récompense (90s)...")
-        time.sleep(90)
+        print("✅ Vote envoyé. Attente finale pour Orion (90s)...")
+        time.sleep(90) # Comme tu l'as dit : pause humaine totale
 
-        print("🎯 [4/4] Scanner final...")
-        found = False
-        for i in range(30):
-            success = driver.execute_script("""
-                var targets = Array.from(document.querySelectorAll('button, a.btn, .btn-success, span, div'));
-                var reward = targets.find(b => 
-                    (b.innerText && b.innerText.toUpperCase().includes('ORION')) || 
-                    (b.className && b.className.includes('success'))
-                );
-                if(reward) { reward.click(); return true; }
-                return false;
-            """)
-            if success:
-                print(f"✨ VICTOIRE ! Récompense validée à la tentative {i+1}.")
-                found = True
-                break
-            time.sleep(3)
+        # Scanner final pour Orion
+        success = driver.execute_script("""
+            var btn = Array.from(document.querySelectorAll('button, a, .btn, span'))
+                           .find(el => el.innerText && el.innerText.trim().toUpperCase() === 'ORION');
+            if(btn) { btn.click(); return true; }
+            return false;
+        """)
 
-        if not found:
-            driver.save_screenshot("echec_frappe.png")
-            print("❌ Bouton introuvable.")
+        if success:
+            print("✨ VICTOIRE ! Orion a été cliqué.")
+        else:
+            driver.save_screenshot("verif_final.png")
+            print("❌ Orion n'est pas apparu. Vérifie 'verif_final.png'.")
 
     except Exception as e:
-        print(f"❌ Erreur critique : {e}")
-        if driver: driver.save_screenshot("crash_frappe.png")
+        print(f"💥 Erreur : {e}")
+        if driver: driver.save_screenshot("crash_debug.png")
     finally:
         if driver: driver.quit()
 
