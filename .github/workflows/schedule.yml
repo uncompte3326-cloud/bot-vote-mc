@@ -1,29 +1,43 @@
-name: Bot Vote Pixworld
+name: Vote Automatique Pixworld
 
 on:
-  schedule:
-    - cron: '5 */3 * * *'
-  workflow_dispatch:
+  workflow_dispatch: # Permet de le lancer manuellement
 
 jobs:
   vote:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout du code
+        uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - name: Configurer Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
-      - name: Install Dependencies
+      - name: Installer les dépendances
         run: |
-          pip install selenium undetected-chromedriver
+          pip install undetected-chromedriver selenium
+
+      - name: Installer Google Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
 
       - name: Execution du vote
         env:
           MY_EMAIL: ${{ secrets.MY_EMAIL }}
           MY_PASSWORD: ${{ secrets.MY_PASSWORD }}
         run: python vote.py
+
+      - name: Sauvegarder la capture d'écran (en cas d'échec)
+        if: always() # S'exécute même si le script Python crash
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshots
+          path: |
+            ultimate_check.png
+            derniere_chance_debug.png
+            crash_debug.png
+          if-no-files-found: ignore
