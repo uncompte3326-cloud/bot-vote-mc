@@ -1,4 +1,4 @@
-iimport os
+import os
 import time
 import random
 import undetected_chromedriver as uc
@@ -89,14 +89,14 @@ def run_bot():
                 break
         
         if voted:
-            print("Attente de détection du vote (20s)...")
-            time.sleep(20)
+            print("Attente de détection du vote (25s)...")
+            time.sleep(25)
             try:
                 btn_final = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Orion')] | //a[contains(., 'Orion')]")))
                 driver.execute_script("arguments[0].click();", btn_final)
                 print("Bouton Orion validé après vote ! ✅")
             except:
-                print("Orion n'est pas apparu.")
+                print("Orion n'est pas apparu. Peut-être un délai plus long nécessaire.")
         else:
             print("Erreur : Lien de vote introuvable.")
 
