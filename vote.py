@@ -2,8 +2,6 @@ import os
 import time
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
 # --- CONFIGURATION ---
 EMAIL = os.environ.get('MY_EMAIL')
@@ -20,78 +18,62 @@ def run_bot():
     
     driver = None
     try:
-        print("Démarrage du mode 'Scan Total'...")
+        print("🚀 Démarrage de l'Infiltration Directe...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
         
-        # 1. Connexion
-        print("Accès à la page de connexion...")
-        driver.get("https://pixworld.fr/login")
-        time.sleep(15) # On laisse un temps de chargement massif
+        # 1. On va directement sur la page de VOTE (parfois ça bypass le login check)
+        print("Navigation directe vers la zone de vote...")
+        driver.get("https://pixworld.fr/vote")
+        time.sleep(15)
 
-        print("Tentative d'auto-remplissage via JavaScript global...")
-        # Ce script cherche tous les inputs et remplit intelligemment
-        injection_script = f"""
+        # 2. Si on n'est pas connecté, on injecte les identifiants n'importe où sur la page
+        print("Tentative d'injection forcée (Login universel)...")
+        # Ce script cherche les champs même s'ils sont cachés ou dans des fenêtres surgissantes
+        force_login = f"""
             var inputs = document.querySelectorAll('input');
-            var filled = 0;
-            inputs.forEach(function(i) {{
-                if(i.type === 'email' || i.name.includes('mail') || i.placeholder.toLowerCase().includes('email')) {{
-                    i.value = '{EMAIL}';
-                    filled++;
-                }}
-                if(i.type === 'password' || i.name.includes('pass') || i.placeholder.toLowerCase().includes('mot de passe')) {{
-                    i.value = '{PASSWORD}';
-                    filled++;
-                }}
-            }});
-            if(filled >= 2) {{
-                var form = document.querySelector('form');
-                if(form) form.submit();
-                return "OK";
+            if (inputs.length === 0) {{ 
+                window.location.href = 'https://pixworld.fr/login'; 
+            }} else {{
+                inputs.forEach(function(i) {{
+                    if(i.type === 'email' || i.name === 'email') i.value = '{EMAIL}';
+                    if(i.type === 'password' || i.name === 'password') i.value = '{PASSWORD}';
+                }});
+                var btn = document.querySelector('button[type="submit"], input[type="submit"]');
+                if(btn) btn.click();
+                else document.querySelector('form').submit();
             }}
-            return "NOT_FOUND";
         """
-        
-        result = driver.execute_script(injection_script)
-        print(f"Résultat de l'injection : {result}")
+        driver.execute_script(force_login)
+        time.sleep(20)
 
-        if result == "NOT_FOUND":
-            print("Échec du scan. Tentative de secours via navigation directe...")
-        
-        print("Attente de redirection (25s)...")
-        time.sleep(25)
-
-        # 2. Page de vote
-        print("Navigation vers la page de vote...")
+        # 3. On retourne au vote après la tentative de login
         driver.get("https://pixworld.fr/vote")
         time.sleep(10)
 
-        # 3. Récupération Orion
-        print("Scan du bouton Orion...")
+        # 4. Clic Orion Ultra-Large
+        print("Ciblage du bouton Orion...")
+        # On cherche Orion dans TOUT le document, même les textes cachés
         driver.execute_script("""
-            var btns = document.querySelectorAll('button, a, span, div');
-            btns.forEach(function(b) {
-                if(b.innerText && b.innerText.includes('Orion')) b.click();
-            });
+            var all = document.querySelectorAll('*');
+            for (var i = 0; i < all.length; i++) {
+                if (all[i].innerText && all[i].innerText.includes('Orion')) {
+                    all[i].click();
+                    console.log('Orion cliqué');
+                }
+            }
         """)
         
-        # 4. Vote de secours
-        print("Scan des liens de vote...")
-        driver.execute_script(f"""
-            document.querySelectorAll('a').forEach(a => {{
-                if(a.href && a.href.includes('{SITE_CIBLE}')) a.click();
-            }});
-        """)
+        # 5. Vote de secours
+        print("Finalisation du vote...")
+        driver.execute_script(f"document.querySelectorAll('a').forEach(a => {{ if(a.href.includes('{SITE_CIBLE}')) a.click(); }});")
         
         time.sleep(10)
-        print("Fin de session. ✅")
+        print("Opération terminée. ✅")
 
     except Exception as e:
         print(f"Erreur : {e}")
-    
     finally:
-        if driver:
-            driver.quit()
-        print("Navigateur fermé.")
+        if driver: driver.quit()
 
 if __name__ == "__main__":
     run_bot()
