@@ -26,20 +26,12 @@ def run_bot():
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
-    
-    # --- CAMOUFLAGE AVANCÉ ---
-    options.add_argument('--disable-blink-features=AutomationControlled')
+    # On garde seulement l'identité du navigateur, sans les options qui bloquent
     options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
     
     try:
-        print("Démarrage du navigateur furtif (Mode Fantôme)...")
+        print("Démarrage du navigateur furtif...")
         driver = uc.Chrome(options=options, browser_executable_path='/usr/bin/google-chrome')
-        
-        # Supprime la preuve que c'est un robot
-        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        
         wait = WebDriverWait(driver, 30)
 
         # 1. Connexion
@@ -96,7 +88,7 @@ def run_bot():
                 driver.execute_script("arguments[0].click();", btn_final)
                 print("Bouton Orion validé après vote ! ✅")
             except:
-                print("Orion n'est pas apparu. Peut-être un délai plus long nécessaire.")
+                print("Orion n'est pas apparu.")
         else:
             print("Erreur : Lien de vote introuvable.")
 
